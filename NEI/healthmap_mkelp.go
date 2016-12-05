@@ -5,9 +5,7 @@ import (
 	"image/color"
 	"log"
 	"os"
-	"runtime"
 
-	"net/http"
 	_ "net/http/pprof" // Performance profiling
 
 	"bitbucket.org/ctessum/aqhealth"
@@ -93,11 +91,11 @@ var popTypes = []string{totalPop, "WhiteNoLat", "Black",
 
 func main() {
 
-	go func() {
-		runtime.GOMAXPROCS(1)
-
-		log.Println(http.ListenAndServe("localhost:6060", nil))
-	}()
+	// go func() {
+	// 	runtime.GOMAXPROCS(1)
+	//
+	// 	log.Println(http.ListenAndServe("localhost:6060", nil))
+	// }()
 
 	// Create a new configuration variable
 	c := new(Config)
@@ -163,7 +161,7 @@ func main() {
 			panic(err2)
 		}
 		r.Group = scc
-		var files []*aep.InventoryFile
+		//		var files []*aep.InventoryFile
 		for _, filetemplate := range fileTemplates {
 			var tempFiles []*aep.InventoryFile
 			tempFiles, err = r.OpenFilesFromTemplate(filetemplate)
@@ -183,9 +181,9 @@ func main() {
 
 			//mkelp, filter by scc code to reduce run time!!!
 			//Can uncomment below if you know the SCC codes you are intertested in
-			// if scc >= "2310000100" {
-			// 	continue
-			// }
+			if scc >= "2310000100" {
+				continue
+			}
 
 			//this routine calculates the total change in PM2.5 concentration caused by the
 			// emissions in this record.

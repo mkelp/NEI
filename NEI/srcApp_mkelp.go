@@ -6,6 +6,7 @@ import (
 	"log"
 	"os"
 	"sort"
+	//"github.com/ctessum/unit"
 
 	"bitbucket.org/ctessum/aqhealth"
 	"bitbucket.org/ctessum/sparse"
@@ -156,7 +157,7 @@ func main() {
 			panic(err2)
 		}
 		r.Group = scc
-		var files []*aep.InventoryFile
+		//var files []*aep.InventoryFile
 		for _, filetemplate := range fileTemplates {
 			var tempFiles []*aep.InventoryFile
 			tempFiles, err = r.OpenFilesFromTemplate(filetemplate)
@@ -175,9 +176,13 @@ func main() {
 		for _, rec := range data {
 			scc := rec.GetSCC()
 
-			// if scc >= "2310000100" {
+			if scc >= "2310000100" {
+				continue
+			}
+			// if scc >= "2801700006" {
 			// 	continue
 			// }
+
 			pm := pmtotal(rec, c) //outputs a 2D array
 
 			if len(pm) == 0 {
@@ -220,7 +225,7 @@ func main() {
 		}
 
 		// Write out the totals to a csv file.
-		w, err := os.Create("totalsmkelp_race_health.csv")
+		w, err := os.Create("totalsmkelp_race_health_test.csv")
 		if err != nil {
 			panic(err)
 		}
@@ -235,13 +240,23 @@ func main() {
 		}
 		sort.Strings(poltitle)
 
-		row0 := append([]string{"SCC: "}, poltitle...)
-		row0 = append(row0, "SCC_descriptions", "total[Emissions]", "total[NOx]", "total[PRI]", "total[SO2]", "total[VOC]",
-			"tot_deathsE", "deaths_whiteE", "death_blackE", "death_nativeE", "death_asianE", "death_otherE", "death_latinoE", "death_povertyE", "death_twoxpovE",
-			"tot_deathsnox", "deaths_whitenox", "death_blacknox", "death_nativenox", "death_asiannox", "death_othernox", "death_latinonox", "death_povertynox", "death_twoxpovnox",
-			"tot_deathspri", "deaths_whitepri", "death_blackpri", "death_nativepri", "death_asianpri", "death_otherpri", "death_latinopri", "death_povertypri", "death_twoxpovpri",
-			"tot_deathsvoc", "deaths_whitevoc", "death_blackvoc", "death_nativevoc", "death_asianvoc", "death_othervoc", "death_latinovoc", "death_povertyvoc", "death_twoxpovvoc",
-			"tot_deathsso2", "deaths_whiteso2", "death_blackso2", "death_nativeso2", "death_asianso2", "death_otherso2", "death_latinoso2", "death_povertyso2", "death_twoxpovso2",
+		// for i := 0; i < len(poltitle); i++ {
+		// 	poltitle[i] += "Emissions"
+		// }
+
+		row0 := append([]string{"SCC: "}, "SCC Descriptions: ")
+		row0 = append(row0, poltitle...)
+		row0 = append(row0, //"total[Emissions]", "total[NOx]", "total[PRI]", "total[SO2]", "total[VOC]", "total[NH3]",
+
+			"Total Deaths", "Total Deaths due to NOx", "Total Deaths due to PM25-PRI", "Total Deaths due to VOC", "Total Deaths due to SO2", "Total Deaths due to NH3",
+			"Total White Deaths", "White Deaths due to NOx", "White Deaths due to PM25-PRI", "White Deaths due to VOC", "White Deaths due to SO2", "White Deaths due to NH3",
+			"Total Black Deaths", "Black Deaths due to NOx", "Black Deaths due to PM25-PRI", "Black Deaths due to VOC", "Black Deaths due to SO2", "Black Deaths due to NH3",
+			"Total Native Deaths", "Native Deaths due to NOx", "Native Deaths due to PM25-PRI", "Native Deaths due to VOC", "Native Deaths due to SO2", "Native Deaths due to NH3",
+			"Total Asian Deaths", "Asian Deaths due to NOx", "Asian Deaths due to PM25-PRI", "Asian Deaths due to VOC", "Asian Deaths due to SO2", "Asian Deaths due to NH3",
+			"Total Other Deaths", "Other Deaths due to NOx", "Other Deaths due to PM25-PRI", "Other Deaths due to VOC", "Other Deaths due to SO2", "Other Deaths due to NH3",
+			"Total Latino Deaths", "Latino Deaths due to NOx", "Latino Deaths due to PM25-PRI", "Latino Deaths due to VOC", "Latino Deaths due to SO2", "Latino Deaths due to NH3",
+			"Total Poverty Deaths", "Poverty Deaths due to NOx", "Poverty Deaths due to PM25-PRI", "Poverty Deaths due to VOC", "Poverty Deaths due to SO2", "Poverty Deaths due to NH3",
+			"Total Povertyx2 Deaths", "Povertyx2 Deaths due to NOx", "Povertyx2 Deaths due to PM25-PRI", "Povertyx2 Deaths due to VOC", "Povertyx2 Deaths due to SO2", "Povertyx2 Deaths due to NH3",
 		)
 
 		//links units to pollutants
@@ -266,24 +281,37 @@ func main() {
 		}
 
 		for scc, rec := range recordholder {
-			pm25Concentration := concentrationholder[scc][0]
-			noxConcentration := concentrationholder[scc][1]
-			PRIConcentration := concentrationholder[scc][2]
-			so2Concentration := concentrationholder[scc][3]
-			vocConcentration := concentrationholder[scc][4]
+
+			// pm25Concentration := concentrationholder[scc][0]    //buggy data withdraw from pm
+			noxConcentration := concentrationholder[scc][0]
+			PRIConcentration := concentrationholder[scc][1]
+			so2Concentration := concentrationholder[scc][2]
+			vocConcentration := concentrationholder[scc][3]
+			nh3Concentration := concentrationholder[scc][4]
+
+			//total emissions calc
+			pm25Concentration1 := make([]float64, len(noxConcentration))
+			pm25Concentration2 := make([]float64, len(noxConcentration))
+			pm25Concentration3 := make([]float64, len(noxConcentration))
+			pm25Concentrationx := make([]float64, len(noxConcentration))
+
+			floats.AddTo(pm25Concentration1, noxConcentration, PRIConcentration)
+			floats.AddTo(pm25Concentration2, pm25Concentration1, so2Concentration)
+			floats.AddTo(pm25Concentration3, pm25Concentration2, vocConcentration)
+			floats.AddTo(pm25Concentrationx, pm25Concentration3, nh3Concentration)
 
 			// Calculate health impacts of the emissions in this record.
 			//Total PM2.5
 
-			healthImpactspm := make([]float64, len(pm25Concentration))
-			whitehealthImpactspm := make([]float64, len(pm25Concentration))
-			blackhealthImpactspm := make([]float64, len(pm25Concentration))
-			nativehealthImpactspm := make([]float64, len(pm25Concentration))
-			asianealthImpactspm := make([]float64, len(pm25Concentration))
-			otherhealthImpactspm := make([]float64, len(pm25Concentration))
-			latinohealthImpactspm := make([]float64, len(pm25Concentration))
-			povertyealthImpactspm := make([]float64, len(pm25Concentration))
-			twoxpovalthImpactspm := make([]float64, len(pm25Concentration))
+			healthImpactspm := make([]float64, len(pm25Concentrationx))
+			whitehealthImpactspm := make([]float64, len(pm25Concentrationx))
+			blackhealthImpactspm := make([]float64, len(pm25Concentrationx))
+			nativehealthImpactspm := make([]float64, len(pm25Concentrationx))
+			asianealthImpactspm := make([]float64, len(pm25Concentrationx))
+			otherhealthImpactspm := make([]float64, len(pm25Concentrationx))
+			latinohealthImpactspm := make([]float64, len(pm25Concentrationx))
+			povertyealthImpactspm := make([]float64, len(pm25Concentrationx))
+			twoxpovalthImpactspm := make([]float64, len(pm25Concentrationx))
 
 			pop := c.pop[totalPop]
 			whitepop := c.pop[whitenolat]
@@ -295,9 +323,10 @@ func main() {
 			povertyop := c.pop[poverty]
 			twoxpovpop := c.pop[twoxpov]
 
-			for i, conc := range pm25Concentration {
-				rr := aqhealth.RRpm25Linear(conc)
-				healthImpactspm[i] = aqhealth.Deaths(rr, pop[i], c.mr[i])
+			for i, conc := range pm25Concentrationx {
+				rr := aqhealth.RRpm25Linear( /*-*/ conc)
+				//NOTE: add minuses here
+				healthImpactspm[i] = /*-*/ aqhealth.Deaths(rr, pop[i], c.mr[i])
 				whitehealthImpactspm[i] = aqhealth.Deaths(rr, whitepop[i], c.mr[i])
 				blackhealthImpactspm[i] = aqhealth.Deaths(rr, blackpop[i], c.mr[i])
 				nativehealthImpactspm[i] = aqhealth.Deaths(rr, nativepop[i], c.mr[i])
@@ -344,7 +373,7 @@ func main() {
 			povertyealthImpactspri := make([]float64, len(PRIConcentration))
 			twoxpovalthImpactspri := make([]float64, len(PRIConcentration))
 
-			for i, conc := range noxConcentration {
+			for i, conc := range PRIConcentration {
 				rr := aqhealth.RRpm25Linear(conc)
 				healthImpactspri[i] = aqhealth.Deaths(rr, pop[i], c.mr[i])
 				whitehealthImpactspri[i] = aqhealth.Deaths(rr, whitepop[i], c.mr[i])
@@ -369,7 +398,7 @@ func main() {
 			povertyealthImpactsso2 := make([]float64, len(so2Concentration))
 			twoxpovalthImpactsso2 := make([]float64, len(so2Concentration))
 
-			for i, conc := range noxConcentration {
+			for i, conc := range so2Concentration {
 				rr := aqhealth.RRpm25Linear(conc)
 				healthImpactsso2[i] = aqhealth.Deaths(rr, pop[i], c.mr[i])
 				whitehealthImpactsso2[i] = aqhealth.Deaths(rr, whitepop[i], c.mr[i])
@@ -393,7 +422,7 @@ func main() {
 			povertyealthImpactsvoc := make([]float64, len(vocConcentration))
 			twoxpovalthImpactsvoc := make([]float64, len(vocConcentration))
 
-			for i, conc := range noxConcentration {
+			for i, conc := range vocConcentration {
 				rr := aqhealth.RRpm25Linear(conc)
 				healthImpactsvoc[i] = aqhealth.Deaths(rr, pop[i], c.mr[i])
 				whitehealthImpactsvoc[i] = aqhealth.Deaths(rr, whitepop[i], c.mr[i])
@@ -405,86 +434,142 @@ func main() {
 				povertyealthImpactsvoc[i] = aqhealth.Deaths(rr, povertyop[i], c.mr[i])
 				twoxpovalthImpactsvoc[i] = aqhealth.Deaths(rr, twoxpovpop[i], c.mr[i])
 			}
+			//NH3 health impacts
+			healthImpactsnh3 := make([]float64, len(nh3Concentration))
+			whitehealthImpactsnh3 := make([]float64, len(nh3Concentration))
+			blackhealthImpactsnh3 := make([]float64, len(nh3Concentration))
+			nativehealthImpactsnh3 := make([]float64, len(nh3Concentration))
+			asianealthImpactsnh3 := make([]float64, len(nh3Concentration))
+			otherhealthImpactsnh3 := make([]float64, len(nh3Concentration))
+			latinohealthImpactsnh3 := make([]float64, len(nh3Concentration))
+			povertyealthImpactsnh3 := make([]float64, len(nh3Concentration))
+			twoxpovalthImpactsnh3 := make([]float64, len(nh3Concentration))
+
+			for i, conc := range nh3Concentration {
+				rr := aqhealth.RRpm25Linear(conc)
+				healthImpactsnh3[i] = aqhealth.Deaths(rr, pop[i], c.mr[i])
+				whitehealthImpactsnh3[i] = aqhealth.Deaths(rr, whitepop[i], c.mr[i])
+				blackhealthImpactsnh3[i] = aqhealth.Deaths(rr, blackpop[i], c.mr[i])
+				nativehealthImpactsnh3[i] = aqhealth.Deaths(rr, nativepop[i], c.mr[i])
+				asianealthImpactsnh3[i] = aqhealth.Deaths(rr, asianpop[i], c.mr[i])
+				otherhealthImpactsnh3[i] = aqhealth.Deaths(rr, otherpop[i], c.mr[i])
+				latinohealthImpactsnh3[i] = aqhealth.Deaths(rr, latinopop[i], c.mr[i])
+				povertyealthImpactsnh3[i] = aqhealth.Deaths(rr, povertyop[i], c.mr[i])
+				twoxpovalthImpactsnh3[i] = aqhealth.Deaths(rr, twoxpovpop[i], c.mr[i])
+			}
+
+			healthImpactspmx := make([]float64, len(pm25Concentrationx))
+			//
+			for i, conc := range pm25Concentrationx {
+				rr := aqhealth.RRpm25Linear(conc)
+				healthImpactspmx[i] = aqhealth.Deaths(rr, pop[i], c.mr[i])
+			}
 
 			totals := rec.Totals()
 			line := make([]string, len(row0))
 			line[0] = scc
+			line[1] = sccDesc[scc]
 			for i, pol := range poltitle {
 				for pollutant, value := range totals {
 					if pollutant.Name == pol {
-						line[i+1] = fmt.Sprintf("%g", value.Value())
+						line[i+2] = fmt.Sprintf("%g", value.Value())
 					}
 				}
 			}
-			line = line[:len(line)-51]
+			line = line[:len(line)-54]
 
-			line = append(line, sccDesc[scc])
+			//			line = append(line, sccDesc[scc])
 
-			line = append(line, fmt.Sprintf("%g", floats.Sum(pm25Concentration)))
-			line = append(line, fmt.Sprintf("%g", floats.Sum(noxConcentration)))
-			line = append(line, fmt.Sprintf("%g", floats.Sum(PRIConcentration)))
-			line = append(line, fmt.Sprintf("%g", floats.Sum(so2Concentration)))
-			line = append(line, fmt.Sprintf("%g", floats.Sum(vocConcentration)))
+			// line = append(line, fmt.Sprintf("%g", floats.Sum(pm25Concentrationx)))
+			// line = append(line, fmt.Sprintf("%g", floats.Sum(noxConcentration)))
+			// line = append(line, fmt.Sprintf("%g", floats.Sum(PRIConcentration)))
+			// line = append(line, fmt.Sprintf("%g", floats.Sum(so2Concentration)))
+			// line = append(line, fmt.Sprintf("%g", floats.Sum(vocConcentration)))
+			// line = append(line, fmt.Sprintf("%g", floats.Sum(nh3Concentration)))
 
+			//Total Health Impacts
 			line = append(line, fmt.Sprintf("%g", floats.Sum(healthImpactspm)))
-			line = append(line, fmt.Sprintf("%g", floats.Sum(whitehealthImpactspm)))
-			line = append(line, fmt.Sprintf("%g", floats.Sum(blackhealthImpactspm)))
-			line = append(line, fmt.Sprintf("%g", floats.Sum(nativehealthImpactspm)))
-			line = append(line, fmt.Sprintf("%g", floats.Sum(asianealthImpactspm)))
-			line = append(line, fmt.Sprintf("%g", floats.Sum(otherhealthImpactspm)))
-			line = append(line, fmt.Sprintf("%g", floats.Sum(latinohealthImpactspm)))
-			line = append(line, fmt.Sprintf("%g", floats.Sum(povertyealthImpactspm)))
-			line = append(line, fmt.Sprintf("%g", floats.Sum(twoxpovalthImpactspm)))
-
 			line = append(line, fmt.Sprintf("%g", floats.Sum(healthImpactsnox)))
-			line = append(line, fmt.Sprintf("%g", floats.Sum(whitehealthImpactsnox)))
-			line = append(line, fmt.Sprintf("%g", floats.Sum(blackhealthImpactsnox)))
-			line = append(line, fmt.Sprintf("%g", floats.Sum(nativehealthImpactsnox)))
-			line = append(line, fmt.Sprintf("%g", floats.Sum(asianealthImpactsnox)))
-			line = append(line, fmt.Sprintf("%g", floats.Sum(otherhealthImpactsnox)))
-			line = append(line, fmt.Sprintf("%g", floats.Sum(latinohealthImpactsnox)))
-			line = append(line, fmt.Sprintf("%g", floats.Sum(povertyealthImpactsnox)))
-			line = append(line, fmt.Sprintf("%g", floats.Sum(twoxpovalthImpactsnox)))
-
 			line = append(line, fmt.Sprintf("%g", floats.Sum(healthImpactspri)))
-			line = append(line, fmt.Sprintf("%g", floats.Sum(whitehealthImpactspri)))
-			line = append(line, fmt.Sprintf("%g", floats.Sum(blackhealthImpactspri)))
-			line = append(line, fmt.Sprintf("%g", floats.Sum(nativehealthImpactspri)))
-			line = append(line, fmt.Sprintf("%g", floats.Sum(asianealthImpactspri)))
-			line = append(line, fmt.Sprintf("%g", floats.Sum(otherhealthImpactspri)))
-			line = append(line, fmt.Sprintf("%g", floats.Sum(latinohealthImpactspri)))
-			line = append(line, fmt.Sprintf("%g", floats.Sum(povertyealthImpactspri)))
-			line = append(line, fmt.Sprintf("%g", floats.Sum(twoxpovalthImpactspri)))
-
-			line = append(line, fmt.Sprintf("%g", floats.Sum(healthImpactsso2)))
-			line = append(line, fmt.Sprintf("%g", floats.Sum(whitehealthImpactsso2)))
-			line = append(line, fmt.Sprintf("%g", floats.Sum(blackhealthImpactsso2)))
-			line = append(line, fmt.Sprintf("%g", floats.Sum(nativehealthImpactsso2)))
-			line = append(line, fmt.Sprintf("%g", floats.Sum(asianealthImpactsso2)))
-			line = append(line, fmt.Sprintf("%g", floats.Sum(otherhealthImpactsso2)))
-			line = append(line, fmt.Sprintf("%g", floats.Sum(latinohealthImpactsso2)))
-			line = append(line, fmt.Sprintf("%g", floats.Sum(povertyealthImpactsso2)))
-			line = append(line, fmt.Sprintf("%g", floats.Sum(twoxpovalthImpactsso2)))
-
 			line = append(line, fmt.Sprintf("%g", floats.Sum(healthImpactsvoc)))
+			line = append(line, fmt.Sprintf("%g", floats.Sum(healthImpactsso2)))
+			line = append(line, fmt.Sprintf("%g", floats.Sum(healthImpactsnh3)))
+
+			// White Health impacts
+			line = append(line, fmt.Sprintf("%g", floats.Sum(whitehealthImpactspm)))
+			line = append(line, fmt.Sprintf("%g", floats.Sum(whitehealthImpactsnox)))
+			line = append(line, fmt.Sprintf("%g", floats.Sum(whitehealthImpactspri)))
 			line = append(line, fmt.Sprintf("%g", floats.Sum(whitehealthImpactsvoc)))
+			line = append(line, fmt.Sprintf("%g", floats.Sum(whitehealthImpactsso2)))
+			line = append(line, fmt.Sprintf("%g", floats.Sum(whitehealthImpactsnh3)))
+			//Black Health impacts
+			line = append(line, fmt.Sprintf("%g", floats.Sum(blackhealthImpactspm)))
+			line = append(line, fmt.Sprintf("%g", floats.Sum(blackhealthImpactsnox)))
+			line = append(line, fmt.Sprintf("%g", floats.Sum(blackhealthImpactspri)))
 			line = append(line, fmt.Sprintf("%g", floats.Sum(blackhealthImpactsvoc)))
+			line = append(line, fmt.Sprintf("%g", floats.Sum(blackhealthImpactsso2)))
+			line = append(line, fmt.Sprintf("%g", floats.Sum(blackhealthImpactsnh3)))
+
+			//Native Health impacts
+
+			line = append(line, fmt.Sprintf("%g", floats.Sum(nativehealthImpactspm)))
+			line = append(line, fmt.Sprintf("%g", floats.Sum(nativehealthImpactsnox)))
+			line = append(line, fmt.Sprintf("%g", floats.Sum(nativehealthImpactspri)))
 			line = append(line, fmt.Sprintf("%g", floats.Sum(nativehealthImpactsvoc)))
+			line = append(line, fmt.Sprintf("%g", floats.Sum(nativehealthImpactsso2)))
+			line = append(line, fmt.Sprintf("%g", floats.Sum(nativehealthImpactsnh3)))
+
+			//Asian Health impacts
+			line = append(line, fmt.Sprintf("%g", floats.Sum(asianealthImpactspm)))
+			line = append(line, fmt.Sprintf("%g", floats.Sum(asianealthImpactsnox)))
+			line = append(line, fmt.Sprintf("%g", floats.Sum(asianealthImpactspri)))
 			line = append(line, fmt.Sprintf("%g", floats.Sum(asianealthImpactsvoc)))
+			line = append(line, fmt.Sprintf("%g", floats.Sum(asianealthImpactsso2)))
+			line = append(line, fmt.Sprintf("%g", floats.Sum(asianealthImpactsnh3)))
+
+			//Other Health impacts
+			line = append(line, fmt.Sprintf("%g", floats.Sum(otherhealthImpactspm)))
+			line = append(line, fmt.Sprintf("%g", floats.Sum(otherhealthImpactsnox)))
+			line = append(line, fmt.Sprintf("%g", floats.Sum(otherhealthImpactspri)))
 			line = append(line, fmt.Sprintf("%g", floats.Sum(otherhealthImpactsvoc)))
+			line = append(line, fmt.Sprintf("%g", floats.Sum(otherhealthImpactsso2)))
+			line = append(line, fmt.Sprintf("%g", floats.Sum(otherhealthImpactsnh3)))
+
+			// Latino Health impacts
+			line = append(line, fmt.Sprintf("%g", floats.Sum(latinohealthImpactspm)))
+			line = append(line, fmt.Sprintf("%g", floats.Sum(latinohealthImpactsnox)))
+			line = append(line, fmt.Sprintf("%g", floats.Sum(latinohealthImpactspri)))
 			line = append(line, fmt.Sprintf("%g", floats.Sum(latinohealthImpactsvoc)))
+			line = append(line, fmt.Sprintf("%g", floats.Sum(latinohealthImpactsso2)))
+			line = append(line, fmt.Sprintf("%g", floats.Sum(latinohealthImpactsnh3)))
+
+			//Poverty Health impacts
+			line = append(line, fmt.Sprintf("%g", floats.Sum(povertyealthImpactspm)))
+			line = append(line, fmt.Sprintf("%g", floats.Sum(povertyealthImpactsnox)))
+			line = append(line, fmt.Sprintf("%g", floats.Sum(povertyealthImpactspri)))
 			line = append(line, fmt.Sprintf("%g", floats.Sum(povertyealthImpactsvoc)))
+			line = append(line, fmt.Sprintf("%g", floats.Sum(povertyealthImpactsso2)))
+			line = append(line, fmt.Sprintf("%g", floats.Sum(povertyealthImpactsnh3)))
+
+			// Povertyx2 Health impacts
+
+			line = append(line, fmt.Sprintf("%g", floats.Sum(twoxpovalthImpactspm)))
+			line = append(line, fmt.Sprintf("%g", floats.Sum(twoxpovalthImpactsnox)))
+			line = append(line, fmt.Sprintf("%g", floats.Sum(twoxpovalthImpactspri)))
 			line = append(line, fmt.Sprintf("%g", floats.Sum(twoxpovalthImpactsvoc)))
+			line = append(line, fmt.Sprintf("%g", floats.Sum(twoxpovalthImpactsso2)))
+			line = append(line, fmt.Sprintf("%g", floats.Sum(twoxpovalthImpactsnh3)))
 
 			err5 := ww.Write(line)
 			if err5 != nil {
 				panic(err5)
 			}
+
 		}
 		ww.Flush()
 		w.Close()
-
 	}
+
 }
 
 //If no errors, should ouput a CSV file with emissions and deaths for each SCC code
@@ -616,14 +701,14 @@ func pmtotal(rec aep.Record, c *Config) [][]float64 {
 	row4 := make([]float64, len(c.gridCells))
 	row5 := make([]float64, len(c.gridCells))
 
-	for pollutant, value := range totals {
-
-		inmapPol, ok := pollutantCrosswalk[pollutant.Name]
-		if !ok {
-			panic(fmt.Errorf("missing pollutant %s", pollutant.Name))
-		}
-		floats.AddScaled(row1, value.Value(), concentrationSurrogates[inmapPol])
-	}
+	// for pollutant, value := range totals {
+	//
+	// 	inmapPol, ok := pollutantCrosswalk[pollutant.Name]
+	// 	if !ok {
+	// 		panic(fmt.Errorf("missing pollutant %s", pollutant.Name))
+	// 	}
+	// 	floats.AddScaled(row1, value.Value(), concentrationSurrogates[inmapPol])
+	// }
 
 	for _, value := range totals {
 
@@ -631,7 +716,7 @@ func pmtotal(rec aep.Record, c *Config) [][]float64 {
 		if !ok {
 			panic(fmt.Errorf("missing pollutant NOX"))
 		}
-		floats.AddScaled(row2, value.Value(), concentrationSurrogates[inmapPol])
+		floats.AddScaled(row1, value.Value(), concentrationSurrogates[inmapPol])
 
 	}
 
@@ -641,7 +726,7 @@ func pmtotal(rec aep.Record, c *Config) [][]float64 {
 		if !ok {
 			panic(fmt.Errorf("missing pollutant PM25-PRI"))
 		}
-		floats.AddScaled(row3, value.Value(), concentrationSurrogates[inmapPol])
+		floats.AddScaled(row2, value.Value(), concentrationSurrogates[inmapPol])
 
 	}
 
@@ -651,7 +736,7 @@ func pmtotal(rec aep.Record, c *Config) [][]float64 {
 		if !ok {
 			panic(fmt.Errorf("missing pollutant SO2"))
 		}
-		floats.AddScaled(row4, value.Value(), concentrationSurrogates[inmapPol])
+		floats.AddScaled(row3, value.Value(), concentrationSurrogates[inmapPol])
 
 	}
 
@@ -660,6 +745,16 @@ func pmtotal(rec aep.Record, c *Config) [][]float64 {
 		inmapPol, ok := pollutantCrosswalk["VOC"]
 		if !ok {
 			panic(fmt.Errorf("missing pollutant VOC"))
+		}
+		floats.AddScaled(row4, value.Value(), concentrationSurrogates[inmapPol])
+
+	}
+
+	for _, value := range totals {
+
+		inmapPol, ok := pollutantCrosswalk["NH3"]
+		if !ok {
+			panic(fmt.Errorf("missing pollutant NH3"))
 		}
 		floats.AddScaled(row5, value.Value(), concentrationSurrogates[inmapPol])
 

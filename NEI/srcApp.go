@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/csv"
+	"fmt"
 	"log"
 	"os"
 
@@ -121,6 +122,8 @@ func main() {
 			panic(err3)
 		}
 		log.Printf("Finished sector %s", sector)
+		fmt.Println(report.TotalsTable())
+		fmt.Println(report.DroppedTotalsTable())
 		totalReport.AddData(report.Files...)
 		totalRecords += len(data)
 
