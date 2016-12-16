@@ -1,0 +1,115 @@
+UseSR = true
+SRFile = "/home/mkelp/srMatrix/sr.ncf"
+
+SpatialCache="/home/mkelp/work/src/NEI/cache"
+MaxCacheEntries=30
+
+[NEIData]
+SrgSpec = "${GOPATH}/src/github.com/ctessum/aep/data/nei2011/surrogate_specification_all_edited.csv"
+SrgShapefileDirectory = "$HOME/nei2011Dir/emiss_shp2010"
+SCCExactMatch = true
+GridRef = [
+ 	"$HOME/nei2011Dir/ge_dat/gridding/amgref_us_2011platform_05jan2015_v8.txt",
+ 	"$HOME/nei2011Dir/ge_dat/gridding/amgref_can2010_mex2010v3_12US1_05jan2015_v7.txt",
+ ]
+ OutputSR = "+proj=lcc +lat_1=33.000000 +lat_2=45.000000 +lat_0=40.000000 +lon_0=-97.000000 +x_0=0 +y_0=0 +a=6370997.000000 +b=6370997.000000 +to_meter=1"
+ InputSR = "+proj=longlat"
+ SimplifyTolerance = 0.0
+
+
+[NEIFiles]
+ # afdust= [
+ #  "$HOME/nei2011Dir/2011eh_cb05_v6_11g/inputs/afdust/EPA_2011_afdust_no_precipadj_paved_unpaved_noNEIv2RPOstates_23sep2014_v0.csv",
+ #  "$HOME/nei2011Dir/2011eh_cb05_v6_11g/inputs/afdust/afdust_2011NEIv2_NONPOINT_20141108_11nov2014_v1.csv",
+ # ]
+# ag =  [
+#   "$HOME/nei2011Dir/2011eh_cb05_v6_11g/inputs/ag/ag_2011NEIv2_NONPOINT_20141108_04feb2015_v3.csv",
+# ]
+ # agfire = [
+ #   "$HOME/nei2011Dir/2011eh_cb05_v6_11g/inputs/agfire/agburn_monthly_2011NEIv2_NONPOINT_20141108_11nov2014_v0.csv",
+ # ]
+c1c2rail = [
+  "$HOME/nei2011Dir/2011eh_cb05_v6_11g/inputs/c1c2rail/c1c2rail_2011NEIv2_NONPOINT_20141108_11nov2014_v1.csv",
+  "$HOME/nei2011Dir/2011eh_cb05_v6_11g/inputs/c1c2rail/c1c2_offshore_2011NEIv2_NONPOINT_20141108_11nov2014_v0.csv",
+]
+#  c3marine = [
+#    "$HOME/nei2011Dir/2011eh_cb05_v6_11g/inputs/c3marine/c3marine_2011NEIv2_NONPOINT_20141108_14nov2014_v1.csv",
+#  ]
+# nonpt=  [
+#  "$HOME/nei2011Dir/2011eh_cb05_v6_11g/inputs/nonpt/nonpt_2011NEIv2_NONPOINT_20141108_21jan2015_v5.csv",
+#  "$HOME/nei2011Dir/2011eh_cb05_v6_11g/inputs/nonpt/pfc_2011NEIv2_NONPOINT_20141108_11nov2014_v0.csv",
+#  "$HOME/nei2011Dir/2011eh_cb05_v6_11g/inputs/nonpt/refueling_2011NEIv2_NONPOINT_20141108_11nov2014_v0.csv",
+# ]
+#  nonroad = [
+#    "$HOME/nei2011Dir/2011eh_cb05_v6_11g/inputs/nonroad/nonroad_ff10_california_2011nei_augmented_VOC_11sep2013_v7.csv",
+#    "$HOME/nei2011Dir/2011eh_cb05_v6_11g/inputs/nonroad/2011_SLT_nonroad_01feb2013_Texas_monthly_ff10_07feb2014_v3.csv",
+#    "$HOME/nei2011Dir/2011eh_cb05_v6_11g/inputs/nonroad/2011NEIv1_nonroad_20130621_17oct2014_v6_part1.csv",
+#    "$HOME/nei2011Dir/2011eh_cb05_v6_11g/inputs/nonroad/2011NEIv1_nonroad_20130621_17oct2014_v6_part2.csv",
+#  ]
+#  np_oilgas = [
+#    "$HOME/nei2011Dir/2011eh_cb05_v6_11g/inputs/np_oilgas/np_oilgas_2011NEIv2_NONPOINT_20141108_11nov2014_v0.csv",
+#  ]
+ # othafdust = [
+ # "$HOME/nei2011Dir/2011eh_cb05_v6_11g/inputs/othafdust/afdust_canada_2010_FF10_20130606_05aug2014_v0.csv",
+ # ]
+# othar = [
+#   "$HOME/nei2011Dir/2011eh_cb05_v6_11g/inputs/othar/Mexico_NONROAD_2008INEM_28aug2014_v0.csv",
+#   "$HOME/nei2011Dir/2011eh_cb05_v6_11g/inputs/othar/Mexico_Area_2008INEM_19nov2014_v1.csv",
+#   "$HOME/nei2011Dir/2011eh_cb05_v6_11g/inputs/othar/nonpoint_miscsolvents_canada_2010_FF10_20130606_06aug2014_v0.csv",
+#   "$HOME/nei2011Dir/2011eh_cb05_v6_11g/inputs/othar/ag_canada_2010_FF10_20130606_05aug2014_v0.csv",
+#   "$HOME/nei2011Dir/2011eh_cb05_v6_11g/inputs/othar/nonroad_t4_canada_2010_FF10_20130606_05jan2015_v1.csv",
+#   "$HOME/nei2011Dir/2011eh_cb05_v6_11g/inputs/othar/nonroad_t1t5_canada_2010_FF10_20130606_06aug2014_v0.csv",
+#   "$HOME/nei2011Dir/2011eh_cb05_v6_11g/inputs/othar/nonpoint_nosolvents_norwc_canada_2010_FF10_20130606_06aug2014_v0.csv",
+#   "$HOME/nei2011Dir/2011eh_cb05_v6_11g/inputs/othar/nonpoint_rfc_canada_2010_FF10_20130606_06aug2014_v0.csv",
+#   "$HOME/nei2011Dir/2011eh_cb05_v6_11g/inputs/othar/nonroad_t2_canada_2010_FF10_20130606_06aug2014_v0.csv",
+#   "$HOME/nei2011Dir/2011eh_cb05_v6_11g/inputs/othar/c3marine_canada_2010_FF10_20130606_06aug2014_v0.csv",
+# ]
+# othon =[
+#   "$HOME/nei2011Dir/2011eh_cb05_v6_11g/inputs/othon/onroad_canada_2010_FF10_20130606_06aug2014_v0.csv",
+#   "$HOME/nei2011Dir/2011eh_cb05_v6_11g/inputs/othon/Mexico_Onroad_2008INEM_12nov2014_v2.csv",
+#   "$HOME/nei2011Dir/2011eh_cb05_v6_11g/inputs/othon/onroad_HDV_canada_2010_FF10_20130606_06aug2014_v0.csv",
+# ]
+# othpt =  [
+#   "$HOME/nei2011Dir/2011eh_cb05_v6_11g/inputs/othpt/point_novoc_canada_2010_FF10_20130606_06aug2014_v0.csv",
+#   "$HOME/nei2011Dir/2011eh_cb05_v6_11g/inputs/othpt/point_CB05_canada_2010_FF10_20130606_06aug2014_v0.csv",
+#   "$HOME/nei2011Dir/2011eh_cb05_v6_11g/inputs/othpt/point_uog_canada_2010_FF10_20130606_06aug2014_v0.csv",
+#   "$HOME/nei2011Dir/2011eh_cb05_v6_11g/inputs/othpt/Mexico_2008INEM_Point_Revised_coord_14jan2015_v0.csv",
+#   "$HOME/nei2011Dir/2011eh_cb05_v6_11g/inputs/othpt/othpt_offshore_oil_2011NEIv2_POINT_20140913_16sep2014_v0.csv",
+#   "$HOME/nei2011Dir/2011eh_cb05_v6_11g/inputs/othpt/ptinv_eca_imo_nonUS_nonCANADA_caps_vochaps_2011_22aug2013_v0_orl.txt",
+#   "$HOME/nei2011Dir/2011eh_cb05_v6_11g/inputs/othpt/point_oilsands_canada_2010_FF10_20130606_06aug2014_v0.csv",
+# ]
+#  ptegu= [
+#    "$HOME/nei2011Dir/2011eh_cb05_v6_11g/inputs/ptegu/2011NEIv2_POINT_ptegu_NOV_2014_29jan2015_v1.csv",
+#    ##"$HOME/nei2011Dir/2011eh_cb05_v6_11g/inputs/ptegu/ptipm_ff10_noncem_2011eg_Nov19_2014_29jan2015_v2",
+# ]
+# ptnonipm= [
+#   "$HOME/nei2011Dir/2011eh_cb05_v6_11g/inputs/ptnonipm/ptnonipm_2011NEIv2_POINT_20140913_revised_20150115_09feb2015_v2.csv",
+#   "$HOME/nei2011Dir/2011eh_cb05_v6_11g/inputs/ptnonipm/refueling_2011NEIv2_POINT_20140913_04dec2014_v2.csv",
+#   "$HOME/nei2011Dir/2011eh_cb05_v6_11g/inputs/ptnonipm/ethanol_plants_2011NEIv2_POINT_20141123_03feb2015_v1.csv",
+# ]
+# pt_oilgas = [
+#   "$HOME/nei2011Dir/2011eh_cb05_v6_11g/inputs/pt_oilgas/pt_oilgas_2011NEIv2_POINT_20140913_03feb2015_v4.csv",
+# ]
+# rwc=[
+#   "$HOME/nei2011Dir/2011eh_cb05_v6_11g/inputs/rwc/rwc_2011NEIv2_NONPOINT_20141108_24nov2014_v3.csv",
+# ]
+# onroad = [
+# "${nei2011Dir}/2011eh_cb05_v6_11g/inputs/SPEED_NEI_v2_2011_from_v7_partial_E85_noCalif_17feb2015_v0.csv",
+# "${nei2011Dir}/2011eh_cb05_v6_11g/inputs/VMT_NEI_v2_2011_from_v6_partial_E85_noCalif_17feb2015_v0.csv",
+# "${nei2011Dir}/2011eh_cb05_v6_11g/inputs/onroad/VPOP_NEI_v2_2011_from_v5_partial_E85_noCalif_17feb2015_v0.csv",
+# ]
+
+
+[PolsToKeep]
+	[PolsToKeep.VOC]
+		SpecType ="VOC"
+	[PolsToKeep.PM25-PRI]
+		SpecType= "PM2.5"
+	[PolsToKeep.PM2_5]
+		SpecType= "PM2.5"
+	[PolsToKeep.NOX]
+		SpecType= "NOx"
+	[PolsToKeep.NH3]
+		SpecNames= ["Ammonia"]
+	[PolsToKeep.SO2]
+		SpecNames= ["Sulfur dioxide"]
