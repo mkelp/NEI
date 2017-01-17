@@ -1,5 +1,7 @@
 package main
 
+// generates a csv of health and emissions data. added additional VOC contribution for the othpt category
+
 import (
 	"encoding/csv"
 	"fmt"
@@ -13,13 +15,13 @@ import (
 
 	"bitbucket.org/ctessum/aqhealth"
 	"bitbucket.org/ctessum/sparse"
-	"bitbucket.org/ctessum/sr/sr"
 	"github.com/BurntSushi/toml"
 	"github.com/ctessum/aep"
 	"github.com/ctessum/geom"
 	"github.com/ctessum/geom/proj"
 	"github.com/ctessum/unit"
 	"github.com/gonum/floats"
+	"github.com/spatialmodel/inmap/sr"
 )
 
 //this script produces a CSV of a specified sector's SCC code, total emissions per pollutant (kg), and health impact caused by each pollutant to a
@@ -78,7 +80,7 @@ type Config struct {
 
 	sp *aep.SpatialProcessor
 
-	sr        *sr.SR
+	sr        *sr.Reader
 	mr        []float64            // Baseline mortality rate.
 	pop       map[string][]float64 // Population by demographic type.
 	gridCells []geom.Polygonal     // InMAP grid cell geometry
@@ -120,31 +122,63 @@ func main() {
 		panic(err)
 	}
 
-	f, err := os.Open(c.SRFile)
+	f, err := os.Open("/home/mkelp/srMatrix/isrm_v1.2.1.ncf")
 	if err != nil {
 		panic(err)
 	}
-	c.sr, err = sr.New(f)
+	c.sr, err = sr.NewReader(f)
 	if err != nil {
 		print(err)
 	}
-	c.mr, err = c.sr.MortalityBaseline()
-	if err != nil {
-		panic(err)
-	}
+	// c.mr, err = c.sr.MortalityBaseline()
+	// if err != nil {
+	// 	panic(err)
+	// }
 	c.pop = make(map[string][]float64)
-	for _, p := range popTypes {
-		c.pop[p], err = c.sr.Population(p)
-		if err != nil {
-			panic(err)
-		}
-	}
-	gridCells, err := c.sr.GridCells()
-	if err != nil {
-		panic(err)
-	}
-	c.gridCells = gridCells.Cells
+	// for _, p := range popTypes {
+	// 	c.pop[p], err = c.sr.Population(p)
+	// 	if err != nil {
+	// 		panic(err)
+	// 	}
+	// }
+	// gridCells, err := c.sr.GridCells()
+	// if err != nil {
+	// 	panic(err)
+	// }
+	// c.gridCells = gridCells.Cells
+	c.gridCells = c.sr.Geometry()
 
+	variables, err1 := c.sr.Variables("MortalityRate", "TotalPop", "Asian", "Black", "Latino", "Native", "WhiteNoLat")
+	if err != nil {
+		print(err1)
+	}
+	var ok bool
+
+	c.pop[totalPop], ok = variables["TotalPop"]
+	if !ok {
+		panic("Error in population writing")
+	}
+	c.pop[asian], ok = variables["Asian"]
+	if !ok {
+		panic("Error in population writing")
+	}
+	c.pop[black], ok = variables["Black"]
+	if !ok {
+		panic("Error in population writing")
+	}
+	c.pop[latino], ok = variables["Latino"]
+	if !ok {
+		panic("Error in population writing")
+	}
+	c.pop[native], ok = variables["Native"]
+	if !ok {
+		panic("Error in population writing")
+	}
+	c.pop[whitenolat], ok = variables["WhiteNoLat"]
+	if !ok {
+		panic("Error in population writing")
+	}
+	c.mr = variables["MortalityRate"]
 	// Initialize a spatial processor. We're not actually using this now because
 	// we're just counting the total number of records,
 	// but it will be important in the future.
@@ -238,11 +272,11 @@ func (c *Config) setupSpatialProcessor() (*aep.SpatialProcessor, error) {
 	if err != nil {
 		return nil, err
 	}
-	gridCells, err := c.sr.GridCells()
+	gridCells := c.sr.Geometry()
 	if err != nil {
 		return nil, err
 	}
-	grid, err := aep.NewGridIrregular("InMAP", gridCells.Cells, outSR, outSR)
+	grid, err := aep.NewGridIrregular("InMAP", gridCells, outSR, outSR)
 	if err != nil {
 		return nil, err
 	}
@@ -255,24 +289,38 @@ func (c *Config) setupSpatialProcessor() (*aep.SpatialProcessor, error) {
 
 // inmapResultVars is a list of variables that we are keeping from the
 // InMAP output.
-var inmapResultVars = []string{"soa", "primarypm2_5", "pnh4", "pso4", "pno3"}
+var inmapResultVars = []string{"SOA", "PrimaryPM25", "pNH4", "pSO4", "pNO3"}
 
 var pollutantCrosswalk = map[string]string{
-	"VOC":      "soa",
-	"PM25-PRI": "primarypm2_5",
-	"PM2_5":    "primarypm2_5",
-	"PM25":     "primarypm2_5",
-	"NOX":      "pno3",
-	"NH3":      "pnh4",
-	"SO2":      "pso4",
+	"VOC":      "SOA",
+	"PM25-PRI": "PrimaryPM25",
+	"PM2_5":    "PrimaryPM25",
+	"PM25":     "PrimaryPM25",
+	"NOX":      "pNO3",
+	"NH3":      "pNH4",
+	"SO2":      "pSO4",
+	// "XYL":      "soa",
+	// "UNR":      "soa",
+	// "TOL":      "soa",
+	// "TERP":     "soa",
+	// "PAR":      "soa",
+	// "OLE":      "soa",
+	// "NVOL":     "soa",
+	// "MEOH":     "soa",
+	// "ISOP":     "soa",
+	// "IOLE":     "soa",
+	// "FORM":     "soa",
+	// "ETOH":     "soa",
+	// "ETHA":     "soa",
+	// "ETH":      "soa",
 }
 
 // runSR creates an InMAP surrogate using the SR matrix.
 func (c *Config) runSR(srg *sparse.SparseArray) map[string][]float64 {
 
 	const (
-		// SR inputs are in units of ton/year, so convert kg/year to ton/year.
-		tonPerKg = 0.00110231
+		//from kg/yr to ug/s conversion factor mkelp
+		tonPerKg = 31.68808781402895
 	)
 
 	o := make(map[string][]float64)
@@ -280,7 +328,7 @@ func (c *Config) runSR(srg *sparse.SparseArray) map[string][]float64 {
 		oo := make([]float64, len(c.gridCells))
 		//log.Printf("Getting concentrations for pol %s (%d total)", pol, len(srg.Elements))
 		for i, val := range srg.Elements {
-			conc, err := c.sr.Source(pol, i, 0) // TODO: account for plume rise here.
+			conc, err := c.sr.Source(pol, 0, i) // TODO: account for plume rise here.
 			if err != nil {
 				panic(err)
 			}
@@ -452,7 +500,7 @@ func storeData(dataChan chan *dataHolder, c *Config, wg *sync.WaitGroup) {
 	fmt.Println("storedata started")
 
 	//new csv produced
-	w, err := os.Create("mkelp_concurrent_loop_20161209_C3MarineRail.csv")
+	w, err := os.Create("mkelp_concurrent_loop_20170117_onroad.csv")
 	if err != nil {
 		panic(err)
 	}
@@ -565,7 +613,7 @@ func storeData(dataChan chan *dataHolder, c *Config, wg *sync.WaitGroup) {
 			}
 			line = line[:len(line)-len(header)]
 
-			line = append(line, linedeaths...)
+			//line = append(line, linedeaths...)
 
 			err5 := ww.Write(line)
 			if err5 != nil {

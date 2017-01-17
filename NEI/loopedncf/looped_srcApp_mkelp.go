@@ -1,22 +1,29 @@
 package main
 
+//ability to produce a netcdf file of all sectors combined
+//best if more than 1 sector made
+
 import (
 	"encoding/csv"
 	"fmt"
 	"log"
 	"os"
+	"sort"
 	"strconv"
 
 	//"github.com/ctessum/unit"
 
+	_ "net/http/pprof"
+
 	"bitbucket.org/ctessum/cdf"
 	"bitbucket.org/ctessum/sparse"
-	"bitbucket.org/ctessum/sr/sr"
 	"github.com/BurntSushi/toml"
 	"github.com/ctessum/aep"
 	"github.com/ctessum/geom"
 	"github.com/ctessum/geom/proj"
 	"github.com/gonum/floats"
+	"github.com/spatialmodel/inmap"
+	"github.com/spatialmodel/inmap/sr"
 )
 
 //this script produces a CSV of a specified sector's SCC code, total emissions per pollutant (kg), and health impact caused by each pollutant to a
@@ -75,7 +82,7 @@ type Config struct {
 
 	sp *aep.SpatialProcessor
 
-	sr        *sr.SR
+	sr        *sr.Reader
 	mr        []float64            // Baseline mortality rate.
 	pop       map[string][]float64 // Population by demographic type.
 	gridCells []geom.Polygonal     // InMAP grid cell geometry
@@ -97,7 +104,7 @@ const (
 var popTypes = []string{totalPop, whitenolat, black,
 	native, asian, other, latino, poverty, twoxpov}
 
-const inmapNrows = 50105
+const inmapNrows = 52411
 
 func main() {
 
@@ -121,31 +128,69 @@ func main() {
 		panic(err)
 	}
 
-	f, err := os.Open(c.SRFile)
+	// f, err := os.Open(c.SRFile)
+	// if err != nil {
+	// 	panic(err)
+	// }
+
+	f, err := os.Open("/home/mkelp/srMatrix/isrm_v1.2.1.ncf")
 	if err != nil {
 		panic(err)
 	}
-	c.sr, err = sr.New(f)
+
+	c.sr, err = sr.NewReader(f) /// TODO: new Reader  change to NewReader function mkelp
 	if err != nil {
 		print(err)
 	}
-	c.mr, err = c.sr.MortalityBaseline()
-	if err != nil {
-		panic(err)
-	}
+	// c.mr, err = c.sr.MortalityBaseline()
+	// if err != nil {
+	// 	panic(err)
+	// }
 	c.pop = make(map[string][]float64)
-	for _, p := range popTypes {
-		c.pop[p], err = c.sr.Population(p)
-		if err != nil {
-			panic(err)
-		}
-	}
-	gridCells, err := c.sr.GridCells()
-	if err != nil {
-		panic(err)
-	}
-	c.gridCells = gridCells.Cells
+	// for _, p := range popTypes {
+	// 	c.pop[p], err = c.sr.Population(p)
+	// 	if err != nil {
+	// 		panic(err)
+	// 	}
+	// }
+	// gridCells, err := c.sr.GridCells()
+	// if err != nil {
+	// 	panic(err)
+	// }
+	// c.gridCells = gridCells.Cells
+	c.gridCells = c.sr.Geometry()
 
+	variables, err1 := c.sr.Variables("MortalityRate", "TotalPop", "Asian", "Black", "Latino", "Native", "WhiteNoLat")
+	if err != nil {
+		print(err1)
+	}
+	var ok bool
+
+	c.pop[totalPop], ok = variables["TotalPop"]
+	if !ok {
+		panic("Error in population writing")
+	}
+	c.pop[asian], ok = variables["Asian"]
+	if !ok {
+		panic("Error in population writing")
+	}
+	c.pop[black], ok = variables["Black"]
+	if !ok {
+		panic("Error in population writing")
+	}
+	c.pop[latino], ok = variables["Latino"]
+	if !ok {
+		panic("Error in population writing")
+	}
+	c.pop[native], ok = variables["Native"]
+	if !ok {
+		panic("Error in population writing")
+	}
+	c.pop[whitenolat], ok = variables["WhiteNoLat"]
+	if !ok {
+		panic("Error in population writing")
+	}
+	c.mr = variables["MortalityRate"]
 	// Initialize a spatial processor. We're not actually using this now because
 	// we're just counting the total number of records,
 	// but it will be important in the future.
@@ -157,11 +202,16 @@ func main() {
 
 	//totalReport := new(aep.InventoryReport) // initiliazes the files
 
-	concentrationholder := make(map[string]map[string][]float64) //creates outside data holder
-	recordholder := make(map[string]aep.Record)                  //creates outside data holder
-	pols := []string{}                                           // pollutant names for csv
+	concentrationholder := make(map[string]map[string]map[string][]float64) //creates outside data holder
+	recordholder := make(map[string]aep.Record)                             //creates outside data holder
+	pols := []string{}                                                      // pollutant names for csv
 	totalRows2 := 0
+	totalrows := 0
+
 	for sector, fileTemplates := range c.NEIFiles {
+
+		hi := make(map[string]map[string][]float64)
+
 		log.Printf("Started Sector %s", sector)
 		r, err2 := aep.NewEmissionsReader(c.PolsToKeep, aep.Annually, aep.Ton)
 		if err2 != nil {
@@ -193,103 +243,36 @@ func main() {
 				continue
 			}
 
-			if _, ok := concentrationholder[scc]; !ok {
-				concentrationholder[scc] = pm
+			concentrationholder[sector] = make(map[string]map[string][]float64)
+
+			if _, ok := hi[scc]; !ok {
+				hi[scc] = pm
 				recordholder[scc] = rec
 			} else {
 				recordholder[scc].CombineEmissions(rec) // adds concentrations to the data holder
 				for pol, subpm := range pm {
 					pols = append(pols, pol)
-					if _, ok := concentrationholder[scc][pol]; !ok {
-						concentrationholder[scc][pol] = subpm //initializes empty pollutants to have some length
+					if _, ok := hi[scc][pol]; !ok {
+						hi[scc][pol] = subpm //initializes empty pollutants to have some length
 					} else {
-						floats.Add(concentrationholder[scc][pol], subpm) // aggregates all emissions to the data holder
+						floats.Add(hi[scc][pol], subpm) // aggregates all emissions to the data holder
 					}
 				}
+
+				concentrationholder[sector] = hi
+
+				totalrows = len(concentrationholder[sector])
+
 			}
 
-			// 	concentrationholder[scc] = make(map[string][]float64)
-			// 	concentrationholder[scc] = pm
-			//
-			// 	for pol, conc := range pm {
-			// 		h := make([]float64, len(conc))
-			// 		for i, w := range conc {
-			// 			h[i] = (h[i] + w)
-			// 		}
-			// 		concentrationholder[scc][pol] = h
-			// 	}
-
+			for _, f := range files {
+				// Close files.
+				f.ReadSeeker.(*os.File).Close()
+			}
 		}
+		totalRows2 += totalrows
 
-		for _, f := range files {
-			// Close files.
-			f.ReadSeeker.(*os.File).Close()
-		}
 	}
-
-	// for _, rec := range recordholder {
-	// 	//fmt.Println("scc: ", scc)
-	// 	recordTotals := rec.Totals() // map[Pollutant]Value
-	// 	for pollutant, amount := range recordTotals {
-	// 		pols[pollutant.Name] = 0
-	// 		//fmt.Println(pollutant.Name, amount.Value(), amount.Dimensions())
-	//
-	// 		//Dimensions check
-	// 		if _, ok := dims[pollutant.Name]; !ok {
-	// 			dims[pollutant.Name] = amount.Dimensions()
-	// 		}
-	// 		//else { // SOMETHING WRONG, dim not the same
-	// 		// 	if !amount.Dimensions().Matches(d) {
-	// 		// 		panic(fmt.Errorf("dimensions mismatch: '%v' != '%v'", amount.Dimensions(), d))
-	// 		// 	}
-	// 		// }
-	// 	}
-	// 	//fmt.Println("totals: ", rec.Totals())
-	// }
-
-	//NEW CSV writer
-
-	// ww := csv.NewWriter(w)
-	//
-	// q, err := os.Open("/home/mkelp/nei2011Dir/ge_dat/smkreport/sccdesc_pf31_05jan2015_v22.txt")
-	// if err != nil {
-	// 	panic(err)
-	// }
-	// sccDesc, err := aep.SCCDescription(q)
-	// if err != nil {
-	// 	panic(err)
-	// }
-	//
-	// // Write header for CSV
-	//
-	// row0 := []string{}
-	// pollutants := []string{}
-	//
-	// header := []string{}
-	//
-	// for scc := range recordholder {
-	//
-	// 	concentrationx := concentrationholder[scc]
-	// 	concentrationkey := make(map[string]string)
-	// 	// //used in loop to allow only unique pollutants to show up in header
-	// 	// //assign a generic key so that redundant pollutants are overwritten
-	// 	//
-	// 	// // for pol := range concentrationx {
-	// 	// // 	pollutants = append(pollutants, pol)
-	// 	// // }
-	// 	for pol := range concentrationx {
-	// 		concentrationkey[pol] = ""
-	// 	}
-	// 	pollutants = make([]string, 0, len(concentrationx))
-	// 	for polx := range concentrationkey {
-	// 		pollutants = append(pollutants, polx)
-	// 	}
-
-	//
-	// fmt.Println(pollutants)
-
-	//fmt.Println(header)
-
 	tempPols := make(map[string]string)
 	for _, pol := range pols {
 		tempPols[pol] = ""
@@ -300,6 +283,7 @@ func main() {
 	for p := range tempPols {
 		poltitle = append(poltitle, p)
 	}
+	sort.Strings(poltitle)
 
 	fmt.Println("poltitle", poltitle)
 	// fmt.Println("pollutantkey", polkey)
@@ -324,9 +308,7 @@ func main() {
 	// 		}
 	// 	}
 
-	totalRows2 = len(concentrationholder)
-
-	p, err := os.Create("/home/mkelp/work/src/NEI/spatialResults_mkelp_loop.ncf")
+	p, err := os.Create("/home/mkelp/work/src/NEI/spatialResults_mkelp_20170116_egucheck.ncf")
 
 	h := cdf.NewHeader([]string{"scc", "cell"}, []int{totalRows2, inmapNrows})
 	fmt.Println("Netcdf header", []int{totalRows2, inmapNrows})
@@ -344,7 +326,7 @@ func main() {
 
 	//NEW CSV writer
 
-	m, err := os.Create("/home/mkelp/work/src/NEI/index_numbers_loop.csv")
+	m, err := os.Create("/home/mkelp/work/src/NEI/index_numbers_20170116_egucheck.csv")
 	if err != nil {
 		panic(err)
 	}
@@ -354,37 +336,40 @@ func main() {
 	// index := 0
 	index2 := 0
 
-	for scc, pollutants := range concentrationholder {
+	for sector, data := range concentrationholder {
+		for scc, pollutants := range data {
 
-		line[0] = scc
-		line[1] = strconv.Itoa(index2)
+			line[0] = sector
+			line[1] = scc
+			line[2] = strconv.Itoa(index2)
 
-		err5 := mm.Write(line)
-		if err5 != nil {
-			panic(err5)
-		}
-
-		for pol, concArray := range pollutants {
-
-			if len(concArray) != inmapNrows {
-				panic(fmt.Errorf("incorrect number of rows: %d", len(concArray)))
+			err5 := mm.Write(line)
+			if err5 != nil {
+				panic(err5)
 			}
 
-			fmt.Println("sum of data at netcdf writing", floats.Sum(concArray))
+			for pol, concArray := range pollutants {
 
-			start := []int{index2, 0}
-			end := []int{index2, inmapNrows}
+				if len(concArray) != inmapNrows {
+					panic(fmt.Errorf("incorrect number of rows: %d", len(concArray)))
+				}
 
-			// fmt.Println("len of concArray", len(concArray))
-			// fmt.Println("pol", pol)
-			w := cf.Writer(pol, start, end)
-			_, err := w.Write(concArray)
-			if err != nil {
-				panic(err)
+				// fmt.Println("sum of data at netcdf writing", floats.Sum(concArray))
+
+				start := []int{index2, 0}
+				end := []int{index2, inmapNrows}
+
+				// fmt.Println("len of concArray", len(concArray))
+				// fmt.Println("pol", pol)
+				w := cf.Writer(pol, start, end)
+				_, err := w.Write(concArray)
+				if err != nil {
+					panic(err)
+				}
 			}
-		}
 
-		index2++
+			index2++
+		}
 	}
 	// index++
 
@@ -448,11 +433,11 @@ func (c *Config) setupSpatialProcessor() (*aep.SpatialProcessor, error) {
 	if err != nil {
 		return nil, err
 	}
-	gridCells, err := c.sr.GridCells()
+	gridCells := c.sr.Geometry()
 	if err != nil {
 		return nil, err
 	}
-	grid, err := aep.NewGridIrregular("InMAP", gridCells.Cells, outSR, outSR)
+	grid, err := aep.NewGridIrregular("InMAP", gridCells, outSR, outSR)
 	if err != nil {
 		return nil, err
 	}
@@ -465,24 +450,24 @@ func (c *Config) setupSpatialProcessor() (*aep.SpatialProcessor, error) {
 
 // inmapResultVars is a list of variables that we are keeping from the
 // InMAP output.
-var inmapResultVars = []string{"soa", "primarypm2_5", "pnh4", "pso4", "pno3"}
+var inmapResultVars = []string{"SOA", "PrimaryPM25", "pNH4", "pSO4", "pNO3"}
 
 var pollutantCrosswalk = map[string]string{
-	"VOC":      "soa",
-	"PM25-PRI": "primarypm2_5",
-	"PM2_5":    "primarypm2_5",
-	"PM25":     "primarypm2_5",
-	"NOX":      "pno3",
-	"NH3":      "pnh4",
-	"SO2":      "pso4",
+	"VOC":      "SOA",
+	"PM25-PRI": "PrimaryPM25",
+	"PM2_5":    "PrimaryPM25",
+	"PM25":     "PrimaryPM25",
+	"NOX":      "pNO3",
+	"NH3":      "pNH4",
+	"SO2":      "pSO4",
 }
 
 // runSR creates an InMAP surrogate using the SR matrix.
 func (c *Config) runSR(srg *sparse.SparseArray) map[string][]float64 {
 
 	const (
-		// SR inputs are in units of ton/year, so convert kg/year to ton/year.
-		tonPerKg = 0.00110231
+		//from kg/yr to ug/s conversion factor mkelp
+		tonPerKg = 31.68808781402895
 	)
 
 	o := make(map[string][]float64)
@@ -490,7 +475,7 @@ func (c *Config) runSR(srg *sparse.SparseArray) map[string][]float64 {
 		oo := make([]float64, len(c.gridCells))
 		//log.Printf("Getting concentrations for pol %s (%d total)", pol, len(srg.Elements))
 		for i, val := range srg.Elements {
-			conc, err := c.sr.Source(pol, i, 0) // TODO: account for plume rise here.
+			conc, err := c.sr.Source(pol, 0, i) // Ground level emissions
 			if err != nil {
 				panic(err)
 			}
@@ -503,9 +488,7 @@ func (c *Config) runSR(srg *sparse.SparseArray) map[string][]float64 {
 	return o
 }
 
-// pm2.5 data withdraw
-
-func pmtotal(rec aep.Record, c *Config) map[string][]float64 {
+func runSRGroundLevel(rec aep.Record, c *Config) map[string][]float64 {
 	// Get normalized spatial locations of emissions for this record.
 	spatialSurrogate, _, inGrid, err := rec.Spatialize(c.sp, 0)
 	if err != nil {
@@ -514,10 +497,79 @@ func pmtotal(rec aep.Record, c *Config) map[string][]float64 {
 	if !inGrid {
 		return nil
 	}
-
 	// Get normalized spatial locations of the changes in concentrations
 	// caused by emissions in this record
-	concentrationSurrogates := c.runSR(spatialSurrogate)
+	return c.runSR(spatialSurrogate)
+}
+
+func runSRElevated(rec aep.Record, c *Config) map[string][]float64 {
+	const (
+		//from kg/yr to ug/s conversion factor mkelp
+		tonPerKg = 31.68808781402895
+	)
+
+	p := rec.(aep.PointSource).PointData()
+	// Transform coordinates
+	ct, err := p.SR.NewTransform(c.sp.Grids[0].SR)
+	if err != nil {
+		panic(err)
+	}
+	p2, err := p.Point.Transform(ct)
+	if err != nil {
+		panic(err)
+	}
+
+	o := make(map[string][]float64)
+	for _, pol := range inmapResultVars {
+		emis := &inmap.EmisRecord{
+			Geom:     p2.(geom.Point),
+			Height:   p.StackHeight.Value(),
+			Diam:     p.StackDiameter.Value(),
+			Temp:     p.StackTemp.Value(),
+			Velocity: p.StackVelocity.Value(),
+		}
+		switch pol {
+		case "SOA":
+			emis.VOC = tonPerKg
+		case "PrimaryPM25":
+			emis.PM25 = tonPerKg
+		case "pNH4":
+			emis.NH3 = tonPerKg
+		case "pSO4":
+			emis.SOx = tonPerKg
+		case "pNO3":
+			emis.NOx = tonPerKg
+		default:
+			panic(fmt.Errorf("spatialeio: invalid pollutant %s", pol))
+		}
+		conc, err := c.sr.Concentrations(emis)
+		if err != nil {
+			switch err.(type) {
+			case sr.AboveTopErr:
+				fmt.Println(err)
+			default:
+				panic(err)
+			}
+		}
+		o[pol] = conc
+	}
+	return o
+}
+
+// pm2.5 data withdraw
+func pmtotal(rec aep.Record, c *Config) map[string][]float64 {
+	var concentrationSurrogates map[string][]float64
+	switch rec.(type) {
+	case aep.PointSource:
+		pointData := rec.(aep.PointSource).PointData()
+		if pointData.StackHeight.Value() != 0 {
+			concentrationSurrogates = runSRElevated(rec, c)
+		} else {
+			concentrationSurrogates = runSRGroundLevel(rec, c)
+		}
+	default:
+		concentrationSurrogates = runSRGroundLevel(rec, c)
+	}
 
 	totals := rec.Totals()
 
